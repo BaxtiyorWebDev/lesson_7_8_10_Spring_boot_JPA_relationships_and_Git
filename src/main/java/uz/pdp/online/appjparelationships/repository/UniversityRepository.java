@@ -6,4 +6,5 @@ import uz.pdp.online.appjparelationships.entity.University;
 
 @Repository
 public interface UniversityRepository extends JpaRepository<University, Integer> {
+    boolean existsByNameAndAddressIdAndIdNot(String name, Integer address_id, Integer id);
 }

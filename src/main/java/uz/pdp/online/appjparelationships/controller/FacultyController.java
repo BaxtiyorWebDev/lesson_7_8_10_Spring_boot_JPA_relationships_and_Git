@@ -1,11 +1,18 @@
 package uz.pdp.online.appjparelationships.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 import uz.pdp.online.appjparelationships.entity.Faculty;
+import uz.pdp.online.appjparelationships.entity.Group;
+import uz.pdp.online.appjparelationships.entity.Student;
 import uz.pdp.online.appjparelationships.entity.University;
 import uz.pdp.online.appjparelationships.payload.FacultyDto;
 import uz.pdp.online.appjparelationships.repository.FacultyRepo;
+import uz.pdp.online.appjparelationships.repository.GroupRepository;
+import uz.pdp.online.appjparelationships.repository.StudentRepo;
 import uz.pdp.online.appjparelationships.repository.UniversityRepository;
 
 import java.util.List;
@@ -18,6 +25,10 @@ public class FacultyController {
     FacultyRepo facultyRepo;
     @Autowired
     UniversityRepository universityRepository;
+    @Autowired
+    GroupRepository groupRepository;
+    @Autowired
+    StudentRepo studentRepo;
 
     //CREATE
     @PostMapping()
@@ -38,9 +49,10 @@ public class FacultyController {
 
     //READ VAZIRLIK UCHUN
     @GetMapping()
-    public List<Faculty> getFacultyList() {
-        List<Faculty> facultyList = facultyRepo.findAll();
-        return facultyList;
+    public Page<Faculty> getFacultyList(@RequestParam int page) {
+        Pageable pageable = PageRequest.of(page,15);
+        Page<Faculty> facultyPage = facultyRepo.findAll(pageable);
+        return facultyPage;
     }
 
     @GetMapping("/{id}")
@@ -54,14 +66,18 @@ public class FacultyController {
 
     //UNIVERSITET XODIMI UCHUN
     @GetMapping("/byUniversityId/{universityId}")
-    public List<Faculty> getFacultiesByUniversityId(@PathVariable Integer universityId) {
-        List<Faculty> allByUniversityId = facultyRepo.findAllByUniversityId(universityId);
+    public Page<Faculty> getFacultiesByUniversityId(@PathVariable Integer universityId, @RequestParam int page) {
+        Pageable pageable = PageRequest.of(page, 10);
+        Page<Faculty> allByUniversityId = facultyRepo.findAllByUniversityId(universityId, pageable);
         return allByUniversityId;
     }
 
     //UPDATE
     @PutMapping("/{id}")
     public String editFaculty(@PathVariable Integer id, @RequestBody FacultyDto facultyDto) {
+        boolean exists = facultyRepo.existsByNameAndUniversityIdAndIdNot(facultyDto.getName(), facultyDto.getUniversityId(), id);
+        if (exists)
+            return "This faculty already exist";
         Optional<Faculty> optionalFaculty = facultyRepo.findById(id);
         Optional<University> optionalUniversity = universityRepository.findById(facultyDto.getUniversityId());
         if (optionalFaculty.isPresent() && optionalUniversity.isPresent()) {
@@ -78,6 +94,10 @@ public class FacultyController {
     @DeleteMapping("/{id}")
     public String deleteFaculty(@PathVariable Integer id) {
         try {
+            List<Student> allByGroup_facultyId = studentRepo.findAllByGroup_FacultyId(id);
+            List<Group> allByFaculty_id = groupRepository.findAllByFaculty_Id(id);
+            studentRepo.deleteAll(allByGroup_facultyId);
+            groupRepository.deleteAll(allByFaculty_id);
             facultyRepo.deleteById(id);
             return "Data deleted";
         } catch (Exception e) {

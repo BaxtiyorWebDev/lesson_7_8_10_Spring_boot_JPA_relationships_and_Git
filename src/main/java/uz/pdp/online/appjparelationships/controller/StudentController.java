@@ -32,6 +32,9 @@ public class StudentController {
 
     @PostMapping
     public String add(@RequestBody StudentDto studentDto) {
+        boolean exists = studentRepo.existsByFirstNameAndLastNameAndAddressId(studentDto.getFirstName(), studentDto.getLastName(), studentDto.getAddressId());
+        if (exists)
+            return "This student already exist";
         Student student = new Student();
         Optional<Group> optionalGroup = groupRepository.findById(studentDto.getGroupId());
         List<Subject> allById = subjectRepo.findAllById(studentDto.getSubjectsId());
@@ -87,8 +90,9 @@ public class StudentController {
 
     //Fakultet rahbari uchun
     @GetMapping("/facultyId/{id}")
-    public List<Student> studentListByFacultyId(@PathVariable Integer id) {
-        List<Student> allByGroup_facultyId = studentRepo.findAllByGroup_FacultyId(id);
+    public Page<Student> studentListByFacultyId(@PathVariable Integer id, @RequestParam int page) {
+        Pageable pageable = PageRequest.of(page, 10);
+        Page<Student> allByGroup_facultyId = studentRepo.findAllByGroup_FacultyId(id, pageable);
         return allByGroup_facultyId;
     }
 
@@ -101,6 +105,10 @@ public class StudentController {
 
     @PutMapping("/{id}")
     public String editStudent(@PathVariable Integer id, @RequestBody StudentDto studentDto) {
+        boolean exists = studentRepo.existsByFirstNameAndLastNameAndAddressIdAndIdNot(studentDto.getFirstName(), studentDto.getLastName(), studentDto.getAddressId(), id);
+        if (exists) {
+            return "This student already exist";
+        }
         Optional<Student> optionalStudent = studentRepo.findById(id);
         Optional<Address> optionalAddress = addressRepository.findById(studentDto.getAddressId());
         if (optionalStudent.isPresent() && optionalAddress.isPresent()) {
